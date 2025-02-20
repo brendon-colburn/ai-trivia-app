@@ -55,15 +55,14 @@ app.post('/generate-board', async (req, res) => {
 // Evaluate user response with enhanced debugging
 app.post('/evaluate', async (req, res) => {
     try {
-        const { userAnswer, correctAnswer } = req.body;
-        console.log(`Evaluating answer: ${userAnswer} against ${correctAnswer}`);
+        const { userAnswer } = req.body;
+        console.log(`Evaluating answer: ${userAnswer}`);
 
         const messages = [
             { role: "system", content: "You are a Jeopardy game judge that checks answers like Alex Trebek." },
             { role: "user", content: `Evaluate the following response:
             
             Submitted Answer: "${userAnswer}"
-            Control Answer: "${correctAnswer}"
             
             Rules:
             - If the submitted response is not in the form of a question, respond in JSON:

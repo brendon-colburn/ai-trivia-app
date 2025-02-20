@@ -32,8 +32,7 @@ const JeopardyApp = () => {
         if (!selectedQuestion) return;
         try {
             const response = await axios.post('http://localhost:5000/evaluate', {
-                userAnswer,
-                correctAnswer: selectedQuestion.answer,
+                userAnswer: selectedQuestion.answer,
             });
             setEvaluation(response.data);
         } catch (error) {
