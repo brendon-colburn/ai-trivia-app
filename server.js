@@ -55,24 +55,26 @@ app.post('/generate-board', async (req, res) => {
 // Evaluate user response with enhanced debugging
 app.post('/evaluate', async (req, res) => {
     try {
-        const { userAnswer } = req.body;
+        const { userAnswer, userResponse } = req.body;
         console.log(`Evaluating answer: ${userAnswer}`);
 
         const messages = [
-            { role: "system", content: "You are a Jeopardy game judge that checks answers like Alex Trebek." },
-            { role: "user", content: `Evaluate the following response:
+            { role: "system", content: `You are a Jeopardy game judge that checks answers like Alex Trebek.
+                
+                Rules:
+            - If the user response is not in the form of a question, respond in JSON:
+            { "result": false, "message": [[tell them they are wrong because it's not in the form of a question] }
+            - If the submitted answer is correct, respond in JSON:
+            { "result": true, "message": [[tell them they're right]] }
+            - If the submitted answer is incorrect but in the form of a question, respond in JSON:
+            { "result": false, "message": [[tell them they're wrong and let the know the right answer]]] }
             
-            Submitted Answer: "${userAnswer}"
+            Ensure that the response is only valid JSON with no additional text.` },
+            { role: "user", content: `Evaluate the following:
             
-            Rules:
-            - If the submitted response is not in the form of a question, respond in JSON:
-            { "result": false, "message": "Respond how Alex Trebek would respond" }
-            - If the submitted response matches the control answer, respond in JSON:
-            { "result": true, "message": "Respond how Alex Trebek would respond" }
-            - If the answer is incorrect but in the form of a question, respond in JSON:
-            { "result": false, "message": "Respond how Alex Trebek would clarify the correct answer" }
+            Answer: "${userAnswer} UserResponse: "${userResponse}"
             
-            Ensure that the response is only valid JSON with no additional text.` }
+            ` }
         ];
 
         console.log(`Sending evaluation prompt to OpenAI...`);
