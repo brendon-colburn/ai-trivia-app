@@ -1,7 +1,5 @@
 # AI Trivia App
 
-# AI Trivia App
-
 Welcome to the AI Trivia App repository. This project uses artificial intelligence to generate engaging and dynamic trivia questions.
 
 ## Features
