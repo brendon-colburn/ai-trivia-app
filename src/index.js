@@ -3,8 +3,10 @@ import ReactDOM from 'react-dom';
 import axios from 'axios';
 
 const JeopardyApp = () => {
+  const [mode, setMode] = useState('simple'); // "simple" or "complex"
   const [categories, setCategories] = useState([]);
   const [newCategory, setNewCategory] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
   const [board, setBoard] = useState([]);
   const [selectedQuestion, setSelectedQuestion] = useState(null);
   const [userAnswer, setUserAnswer] = useState('');
@@ -18,13 +20,33 @@ const JeopardyApp = () => {
     }
   };
 
-  const generateBoard = async () => {
+  // Generate board for simple mode (using categories)
+  const generateBoardSimple = async () => {
     if (categories.length === 0) return;
     try {
       const response = await axios.post('http://localhost:5000/generate-board', { categories });
       setBoard(response.data.board);
     } catch (error) {
       console.error('Error generating board:', error);
+    }
+  };
+
+  // Generate board for complex mode (using URL)
+  const generateBoardComplex = async () => {
+    if (!sourceUrl.trim()) return;
+    try {
+      const response = await axios.post('http://localhost:5000/generate-board-from-url', { url: sourceUrl });
+      setBoard(response.data.board);
+    } catch (error) {
+      console.error('Error generating board from URL:', error);
+    }
+  };
+
+  const generateBoard = () => {
+    if (mode === 'simple') {
+      generateBoardSimple();
+    } else {
+      generateBoardComplex();
     }
   };
 
@@ -41,7 +63,7 @@ const JeopardyApp = () => {
     }
   };
 
-  // Clear userAnswer and evaluation when a new question is selected
+  // Clear input and evaluation when selecting a new question
   const handleQuestionSelect = (q) => {
     setSelectedQuestion(q);
     setUserAnswer('');
@@ -51,28 +73,70 @@ const JeopardyApp = () => {
   return (
     <div className="min-h-screen bg-blue-200 flex flex-col items-center p-4">
       <h1 className="text-4xl font-bold mb-4">Jeopardy Game</h1>
-      <div className="mb-4 flex flex-col items-center">
-        <input
-          type="text"
-          placeholder="Enter a category"
-          value={newCategory}
-          onChange={(e) => setNewCategory(e.target.value)}
-          className="border p-2 rounded w-96 mb-2"
-        />
-        <button onClick={addCategory} className="bg-blue-500 text-white p-2 rounded">
-          Add Category
-        </button>
+      
+      {/* Mode selection */}
+      <div className="mb-4">
+        <label className="mr-4">
+          <input 
+            type="radio" 
+            name="mode" 
+            value="simple" 
+            checked={mode === 'simple'} 
+            onChange={() => setMode('simple')} 
+            className="mr-1"
+          />
+          Simple Mode
+        </label>
+        <label>
+          <input 
+            type="radio" 
+            name="mode" 
+            value="complex" 
+            checked={mode === 'complex'} 
+            onChange={() => setMode('complex')} 
+            className="mr-1"
+          />
+          Complex Mode
+        </label>
       </div>
-      <div className="mb-4 flex flex-wrap gap-2">
-        {categories.map((category, index) => (
-          <span key={index} className="bg-gray-300 text-black px-3 py-1 rounded-lg">
-            {category}
-          </span>
-        ))}
-      </div>
+
+      {/* Render input based on selected mode */}
+      {mode === 'simple' ? (
+        <div className="mb-4 flex flex-col items-center">
+          <input
+            type="text"
+            placeholder="Enter a category"
+            value={newCategory}
+            onChange={(e) => setNewCategory(e.target.value)}
+            className="border p-2 rounded w-96 mb-2"
+          />
+          <button onClick={addCategory} className="bg-blue-500 text-white p-2 rounded">
+            Add Category
+          </button>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {categories.map((category, index) => (
+              <span key={index} className="bg-gray-300 text-black px-3 py-1 rounded-lg">
+                {category}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="mb-4 flex flex-col items-center">
+          <input
+            type="text"
+            placeholder="Enter a document or website URL"
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            className="border p-2 rounded w-96 mb-2"
+          />
+        </div>
+      )}
+
       <button onClick={generateBoard} className="bg-green-500 text-white p-2 rounded mb-4">
         Generate Board
       </button>
+
       <div className="grid grid-cols-3 gap-4">
         {board.map((categoryData, index) => (
           <div key={index} className="bg-white p-4 rounded shadow-md">
@@ -89,6 +153,7 @@ const JeopardyApp = () => {
           </div>
         ))}
       </div>
+
       {selectedQuestion && (
         <div className="mt-6 p-4 bg-white shadow-md rounded text-center">
           <h2 className="text-2xl mb-4">{selectedQuestion.answer}</h2>
@@ -102,11 +167,7 @@ const JeopardyApp = () => {
             Submit Answer
           </button>
           {evaluation && (
-            <p
-              className={`mt-2 text-lg font-bold ${
-                evaluation.result ? 'text-green-600' : 'text-red-600'
-              }`}
-            >
+            <p className={`mt-2 text-lg font-bold ${evaluation.result ? 'text-green-600' : 'text-red-600'}`}>
               {evaluation.message}
             </p>
           )}
@@ -117,5 +178,4 @@ const JeopardyApp = () => {
 };
 
 ReactDOM.render(<JeopardyApp />, document.getElementById('root'));
-
 export default JeopardyApp;
