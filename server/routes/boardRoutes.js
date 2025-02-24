@@ -1,20 +1,15 @@
 const express = require('express');
 const axios = require('axios');
-const cors = require('cors');
-require('dotenv').config();
+const cheerio = require('cheerio');
+const router = express.Router();
 
-const app = express();
-const PORT = process.env.PORT || 5000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-app.use(express.json());
-app.use(cors());
-
 /*
- * Endpoint: /generate-board
- * Description: Generates a Jeopardy board based on provided categories (Simple Mode).
+ * POST /generate-board (Simple Mode)
+ * Generates a Jeopardy board based on provided categories.
  */
-app.post('/generate-board', async (req, res) => {
+router.post('/generate-board', async (req, res) => {
   try {
     const { categories } = req.body;
     console.log(`Received categories: ${categories}`);
@@ -67,7 +62,7 @@ Categories: ${categories.join(', ')}
                           properties: {
                             answer: {
                               type: "string",
-                              description: "The answer text"
+                              description: "The answer text presented to the contestant"
                             },
                             value: {
                               type: "number",
@@ -91,7 +86,7 @@ Categories: ${categories.join(', ')}
         }
       },
       {
-        headers: {
+        headers: { 
           Authorization: `Bearer ${OPENAI_API_KEY}`,
           'Content-Type': 'application/json'
         }
@@ -108,10 +103,11 @@ Categories: ${categories.join(', ')}
 });
 
 /*
- * Endpoint: /generate-board-from-url
- * Description: Generates a Jeopardy board based on content from a provided document or website URL (Complex Mode).
+ * POST /generate-board-from-url (Complex Mode)
+ * Generates a Jeopardy board based on content from a provided document or website URL.
+ * This mode returns each trivia item with both a Jeopardy-style answer and the correct question.
  */
-app.post('/generate-board-from-url', async (req, res) => {
+router.post('/generate-board-from-url', async (req, res) => {
   try {
     const { url } = req.body;
     if (!url) {
@@ -120,21 +116,30 @@ app.post('/generate-board-from-url', async (req, res) => {
 
     console.log(`Fetching content from URL: ${url}`);
     const response = await axios.get(url);
-    const content = response.data;
-    // Optionally, process the HTML content (e.g., extract text using an HTML parser) before using it
+    let content = response.data;
+    // Optionally process the HTML (e.g., extract text) before using it
+    const $ = cheerio.load(content);
+    const extractedText = $('p')
+        .map((i, el) => $(el).text().trim())
+        .get()
+        .filter(text => text.length > 0)
+        .join('\n\n');
+    content = extractedText || content;
 
     const systemMessage = {
       role: "system",
       content: `
-We are playing a trivia game modeled after Jeopardy. You are given a knowledge source extracted from a document or website. Your task is to generate a trivia board (categories and questions) based solely on this source. Use the following content as your knowledge base:
-
-${content}
+We are playing a trivia game modeled after Jeopardy. You are given a knowledge source extracted from a document or website. Your task is to generate a trivia board (categories and questions) based solely on this source. For each trivia item, provide both:
+1. A Jeopardy-style answer (a declarative statement displayed to the contestant), and 
+2. The corresponding correct question that the contestant should supply as their response.
 
 Guidelines:
-- Generate categories that are relevant to the provided content.
-- For each category, create trivia questions in the Jeopardy style (phrased as a declarative answer prompting a question).
-- Include a range of difficulty values.
+- Generate categories relevant to the provided content.
+- For each category, include a range of difficulty values.
 - Return the output as structured JSON following the provided schema.
+
+Content:
+${content}
       `.trim()
     };
 
@@ -169,16 +174,20 @@ Guidelines:
                         items: {
                           type: "object",
                           properties: {
+                            question: {
+                              type: "string",
+                              description: "The correct question that the contestant should provide"
+                            },
                             answer: {
                               type: "string",
-                              description: "The answer text"
+                              description: "The Jeopardy-style answer displayed to the contestant"
                             },
                             value: {
                               type: "number",
-                              description: "The point value assigned to the answer"
+                              description: "The point value assigned to this trivia item"
                             }
                           },
-                          required: ["answer", "value"],
+                          required: ["question", "answer", "value"],
                           additionalProperties: false
                         }
                       }
@@ -195,7 +204,7 @@ Guidelines:
         }
       },
       {
-        headers: {
+        headers: { 
           Authorization: `Bearer ${OPENAI_API_KEY}`,
           'Content-Type': 'application/json'
         }
@@ -211,76 +220,4 @@ Guidelines:
   }
 });
 
-/*
- * Endpoint: /evaluate
- * Description: Evaluates a user's answer for a given question.
- */
-app.post('/evaluate', async (req, res) => {
-  try {
-    const { userAnswer, userResponse } = req.body;
-    console.log(`Evaluating answer: ${userResponse} for question: ${userAnswer}`);
-
-    const systemMessage = {
-      role: "system",
-      content: "You are a Jeopardy game judge. Evaluate the user's answer and return your evaluation as structured JSON."
-    };
-
-    const userMessage = {
-      role: "user",
-      content: `
-Evaluate the following:
-Answer: "${userAnswer}"
-UserResponse: "${userResponse}"
-      `.trim()
-    };
-
-    const messages = [systemMessage, userMessage];
-
-    console.log('Sending evaluation prompt to OpenAI...');
-    const openAIResponse = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        model: 'gpt-4o-2024-08-06',
-        messages,
-        max_tokens: 1000,
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "evaluation_schema",
-            strict: true,
-            schema: {
-              type: "object",
-              properties: {
-                result: {
-                  type: "boolean",
-                  description: "Indicates if the user's answer is correct"
-                },
-                message: {
-                  type: "string",
-                  description: "Feedback message for the user's response"
-                }
-              },
-              required: ["result", "message"],
-              additionalProperties: false
-            }
-          }
-        }
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    console.log('Received evaluation response from OpenAI');
-    const evaluationResult = JSON.parse(openAIResponse.data.choices[0].message.content);
-    res.json(evaluationResult);
-  } catch (error) {
-    console.error('Error in /evaluate:', error.response?.data || error.message);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+module.exports = router;

@@ -50,11 +50,15 @@ const JeopardyApp = () => {
     }
   };
 
+  // Modified checkAnswer: send expectedQuestion if available from complex mode
   const checkAnswer = async () => {
     if (!selectedQuestion) return;
     try {
+      const expectedQuestion = selectedQuestion.question 
+        ? selectedQuestion.question 
+        : selectedQuestion.answer; // fallback for simple mode
       const response = await axios.post('http://localhost:5000/evaluate', {
-        userAnswer: selectedQuestion.answer,
+        expectedQuestion,
         userResponse: userAnswer
       });
       setEvaluation(response.data);
@@ -156,9 +160,11 @@ const JeopardyApp = () => {
 
       {selectedQuestion && (
         <div className="mt-6 p-4 bg-white shadow-md rounded text-center">
+          {/* Always display the answer (Jeopardy style) */}
           <h2 className="text-2xl mb-4">{selectedQuestion.answer}</h2>
           <input
             type="text"
+            placeholder="Your answer in question form"
             value={userAnswer}
             onChange={(e) => setUserAnswer(e.target.value)}
             className="border p-2 w-full rounded mb-2"
