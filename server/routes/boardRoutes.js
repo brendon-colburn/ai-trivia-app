@@ -116,20 +116,15 @@ router.post('/generate-board-from-url', async (req, res) => {
 
     console.log(`Fetching content from URL: ${url}`);
     const response = await axios.get(url);
-    let content = response.data;
-    // Optionally process the HTML (e.g., extract text) before using it
-    const $ = cheerio.load(content);
-    const extractedText = $('p')
-        .map((i, el) => $(el).text().trim())
-        .get()
-        .filter(text => text.length > 0)
-        .join('\n\n');
-    content = extractedText || content;
+    let content = extractContent(response.data);
 
     // Send the content to OpenAI for summarization
     const summarizationMessage = {
         role: "system",
-        content: `Please provide a concise summary of the following content:\n\n${content}`
+        content: `Please analyze the following content and generate a detailed summary that captures the key points and context, preserving enough information to create interesting trivia questions later on.
+      
+      Content:
+      ${content}`
     };
 
     const summarizationResponse = await axios.post(
@@ -244,5 +239,34 @@ ${content}
     res.status(500).json({ error: error.message });
   }
 });
+
+function extractContent(html) {
+    const $ = cheerio.load(html);
+    let content = '';
+
+    // Include the page title as it often summarizes the page.
+    const title = $('title').text();
+    if (title) {
+        content += title + '\n\n';
+    }
+
+    // Attempt to extract meta descriptions.
+    const metaDescription = $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content');
+    if (metaDescription) {
+        content += metaDescription + '\n\n';
+    }
+
+    // Fallback: extract from paragraphs (only longer paragraphs to skip navigation fluff).
+    const paragraphs = $('p')
+        .map((i, el) => $(el).text().trim())
+        .get()
+        .filter(text => text.length > 50)
+        .join('\n\n');
+    if (paragraphs) {
+        content += paragraphs;
+    }
+
+    return content;
+}
 
 module.exports = router;
