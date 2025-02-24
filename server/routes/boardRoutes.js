@@ -150,12 +150,13 @@ router.post('/generate-board-from-url', async (req, res) => {
       role: "system",
       content: `
 We are playing a trivia game modeled after Jeopardy. You are given a knowledge source extracted from a document or website. Your task is to generate a trivia board (categories and questions) based solely on this source. For each trivia item, provide both:
-1. A Jeopardy-style answer (a declarative statement displayed to the contestant), and 
-2. The corresponding correct question that the contestant should supply as their response.
+1. A Jeopardy-style answer (a declarative statement presented to the contestant), and 
+2. A corresponding question that requires the contestant to infer information from the content rather than simply rewording the answer.
 
 Guidelines:
 - Generate categories relevant to the provided content.
-- For each category, include a range of difficulty values.
+- For each trivia item, ensure the question is uniquely phrased and demands a connection to additional context or inference, rather than being a direct reversal or paraphrase of the answer.
+- Include a range of difficulty values for each category.
 - Return the output as structured JSON following the provided schema.
 
 Content:
