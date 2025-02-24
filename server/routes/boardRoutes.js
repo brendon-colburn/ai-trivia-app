@@ -126,6 +126,31 @@ router.post('/generate-board-from-url', async (req, res) => {
         .join('\n\n');
     content = extractedText || content;
 
+    // Send the content to OpenAI for summarization
+    const summarizationMessage = {
+        role: "system",
+        content: `Please provide a concise summary of the following content:\n\n${content}`
+    };
+
+    const summarizationResponse = await axios.post(
+        'https://api.openai.com/v1/chat/completions',
+        {
+            model: 'gpt-4o-2024-08-06',
+            messages: [summarizationMessage],
+            max_tokens: 500
+        },
+        {
+            headers: {
+                Authorization: `Bearer ${OPENAI_API_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        }
+    );
+
+    const summary = summarizationResponse.data.choices[0].message.content;
+    console.log("Content summary:", summary);
+    content = summary;
+
     const systemMessage = {
       role: "system",
       content: `
