@@ -5,6 +5,7 @@ Welcome to the AI Trivia App repository! This project harnesses the power of art
 ## Table of Contents
 - [Features](#features)
 - [Installation](#installation)
+- [Azure Cosmos DB Setup](#azure-cosmos-db-setup)
 - [Usage](#usage)
 - [Modes](#modes)
 - [Planned Features](#planned-features)
@@ -16,6 +17,7 @@ Welcome to the AI Trivia App repository! This project harnesses the power of art
 - **Interactive UI:** Enjoy a responsive and user-friendly interface built with React and TailwindCSS.
 - **Dual Modes:** Choose between a simple mode (using custom categories) and a complex mode (using a document/website URL as the knowledge source).
 - **Real-Time Evaluation:** Get instant feedback on your answers with structured evaluation responses.
+- **Azure Cosmos DB Backend:** Store and retrieve user scores using Azure Cosmos DB.
 
 ## Installation
 Follow these steps to set up the project locally:
@@ -33,9 +35,19 @@ Follow these steps to set up the project locally:
     npm install
     ```
 4. **Configure Environment Variables:**
-    Create a `.env` file in the project root and add your OpenAI API key:
+    Create a `.env` file in the project root and add your credentials. For example:
     ```env
+    # OpenAI API Key
     OPENAI_API_KEY=your_openai_api_key_here
+
+    # Server Configuration
+    PORT=5000
+
+    # Cosmos DB Configuration
+    COSMOS_DB_ENDPOINT=https://your-cosmosdb-account.documents.azure.com:443/
+    COSMOS_DB_KEY=your_cosmosdb_key_here
+    COSMOS_DB_DATABASE_ID=TriviaDB
+    COSMOS_DB_CONTAINER_ID=Scores
     ```
 5. **Start the Server:**
     ```bash
@@ -46,6 +58,31 @@ Follow these steps to set up the project locally:
     ```bash
     npm start
     ```
+
+## Azure Cosmos DB Setup
+To enable the Cosmos DB backend for saving and retrieving scores, follow these steps:
+
+1. **Create an Azure Resource Group:**
+    ```bash
+    az group create --name MyResourceGroup --location "East US"
+    ```
+2. **Create a Cosmos DB Account using the SQL API:**
+    ```bash
+    az cosmosdb create --name MyCosmosDbAccount --resource-group MyResourceGroup --kind GlobalDocumentDB
+    ```
+3. **Create a Database named `TriviaDB`:**
+    ```bash
+    az cosmosdb sql database create --account-name MyCosmosDbAccount --resource-group MyResourceGroup --name TriviaDB
+    ```
+4. **Create a Container named `Scores` with a partition key `/userId`:**
+    ```bash
+    az cosmosdb sql container create --account-name MyCosmosDbAccount --resource-group MyResourceGroup --database-name TriviaDB --name Scores --partition-key-path "/userId" --throughput 400
+    ```
+   
+   Alternatively, you can provision these resources using Terraform. Refer to the `main.tf` example in the project for guidance.
+
+5. **Update your `.env` file:**
+   Replace the placeholder values in your `.env` file with the actual details from your Azure Cosmos DB setup.
 
 ## Usage
 Once the application is running:
