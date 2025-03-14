@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import axios from 'axios';
 
@@ -11,6 +11,21 @@ const JeopardyApp = () => {
   const [selectedQuestion, setSelectedQuestion] = useState(null);
   const [userAnswer, setUserAnswer] = useState('');
   const [evaluation, setEvaluation] = useState(null);
+  const [scores, setScores] = useState([]); // new state for scores
+
+  // Fetch scores on initial mount and after updates
+  useEffect(() => {
+    fetchScores();
+  }, []);
+
+  const fetchScores = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/scores');
+      setScores(response.data);
+    } catch (error) {
+      console.error('Error fetching scores:', error);
+    }
+  };
 
   const addCategory = () => {
     const trimmed = newCategory.trim();
@@ -62,9 +77,26 @@ const JeopardyApp = () => {
         userResponse: userAnswer
       });
       setEvaluation(response.data);
+
+      // If the evaluation passes, submit the score to be recorded in the backend.
+      if (response.data.result) {
+        // Create a simple score object, you might want to include additional data.
+        const scoreData = {
+          userId: "guest", // Replace with dynamic user info if available
+          score: calculatePoints(selectedQuestion.value) // You can adjust scoring logic as needed.
+        };
+        await axios.post('http://localhost:5000/scores', scoreData);
+        fetchScores(); // Refresh the scores list after adding.
+      }
     } catch (error) {
       console.error('Error evaluating answer:', error);
     }
+  };
+
+  // Dummy function for calculating points
+  const calculatePoints = (value) => {
+    // For example, simply return the value.
+    return value;
   };
 
   // Clear input and evaluation when selecting a new question
@@ -179,6 +211,31 @@ const JeopardyApp = () => {
           )}
         </div>
       )}
+
+      {/* Scoreboard */}
+      <div className="mt-8 w-full max-w-2xl bg-white p-4 shadow-md rounded">
+        <h3 className="text-2xl font-bold mb-4 text-center">Scoreboard</h3>
+        {scores.length > 0 ? (
+          <table className="w-full text-left">
+            <thead>
+              <tr>
+                <th className="border p-2">User</th>
+                <th className="border p-2">Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {scores.map((score, idx) => (
+                <tr key={idx}>
+                  <td className="border p-2">{score.userId}</td>
+                  <td className="border p-2">{score.score}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="text-center">No scores available.</p>
+        )}
+      </div>
     </div>
   );
 };

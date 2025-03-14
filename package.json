@@ -10,6 +10,7 @@
         "server": "node server/server.js"
     },
     "dependencies": {
+        "@azure/cosmos": "^4.2.0",
         "axios": "^1.3.5",
         "cheerio": "^1.0.0",
         "cors": "^2.8.5",
